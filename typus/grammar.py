@@ -11,7 +11,7 @@ class Grammar:
     def __init__(self):
         # We store the actual rule definitions here
         self.rules: Dict[str, Symbol] = {}
-        self.root: Symbol = None
+        self.root: Symbol | None = None
 
     def __getattr__(self, name: str) -> NonTerminal:
         """
