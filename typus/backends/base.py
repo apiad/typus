@@ -5,23 +5,23 @@ if TYPE_CHECKING:
     from ..core import Terminal, NonTerminal, Sequence, Choice
 
 
-class GrammarVisitor(ABC):
+class GrammarVisitor[T](ABC):
     """
     Abstract Base Class for all compilers (GBNF, JsonSchema, Lark).
     """
 
     @abstractmethod
-    def visit_terminal(self, node: "Terminal") -> Any:
+    def visit_terminal(self, node: "Terminal") -> T:
         pass
 
     @abstractmethod
-    def visit_sequence(self, node: "Sequence") -> Any:
+    def visit_sequence(self, node: "Sequence") -> T:
         pass
 
     @abstractmethod
-    def visit_choice(self, node: "Choice") -> Any:
+    def visit_choice(self, node: "Choice") -> T:
         pass
 
     @abstractmethod
-    def visit_non_terminal(self, node: "NonTerminal") -> Any:
+    def visit_non_terminal(self, node: "NonTerminal") -> T:
         pass

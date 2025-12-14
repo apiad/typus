@@ -12,7 +12,7 @@ class Symbol(ABC):
     """
 
     @abstractmethod
-    def accept(self, visitor: "GrammarVisitor"):
+    def accept[T](self, visitor: "GrammarVisitor[T]") -> T:
         pass
 
 
