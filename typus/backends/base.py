@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class GrammarVisitor(ABC):
     """
     Abstract Base Class for all compilers (GBNF, JsonSchema, Lark).

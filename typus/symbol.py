@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class Symbol(ABC):
     """
     The atomic unit of a grammar.
