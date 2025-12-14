@@ -1,6 +1,7 @@
 from typing import Dict, Union
 from typus.core import Symbol, Terminal, NonTerminal, Sequence, Choice
 
+
 class Grammar:
     """
     The main container for defining rules.
@@ -8,6 +9,7 @@ class Grammar:
         g = Grammar()
         g.start = Terminal("Hello")
     """
+
     def __init__(self):
         # We store the actual rule definitions here
         self.rules: Dict[str, Symbol] = {}
