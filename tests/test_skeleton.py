@@ -1,4 +1,4 @@
-from typus.symbol import Symbol
+from typus.core import Symbol
 from typus.backends.base import GrammarVisitor
 
 
