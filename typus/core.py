@@ -49,3 +49,16 @@ class Choice(Symbol):
 
     def accept(self, visitor: "GrammarVisitor"):
         return visitor.visit_choice(self)
+
+
+class NonTerminal(Symbol):
+    """A reference to another rule (e.g., 'expr' or 'statement')."""
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def accept(self, visitor: "GrammarVisitor"):
+        return visitor.visit_non_terminal(self)
+
+    def __repr__(self):
+        return f"Ref({self.name})"

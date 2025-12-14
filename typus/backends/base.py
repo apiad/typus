@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..core import Terminal, NonTerminal, Sequence, Choice
 
 
 class GrammarVisitor(ABC):
@@ -8,16 +11,17 @@ class GrammarVisitor(ABC):
     """
 
     @abstractmethod
-    def visit_terminal(self, node) -> Any:
+    def visit_terminal(self, node: "Terminal") -> Any:
         pass
 
     @abstractmethod
-    def visit_sequence(self, node) -> Any:
+    def visit_sequence(self, node: "Sequence") -> Any:
         pass
 
     @abstractmethod
-    def visit_choice(self, node) -> Any:
+    def visit_choice(self, node: "Choice") -> Any:
         pass
 
-    # visit_non_terminal will come in Step 3
-    # We will add visit_sequence, visit_choice later
+    @abstractmethod
+    def visit_non_terminal(self, node: "NonTerminal") -> Any:
+        pass
