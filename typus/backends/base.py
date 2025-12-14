@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class GrammarVisitor(ABC):
@@ -7,15 +8,15 @@ class GrammarVisitor(ABC):
     """
 
     @abstractmethod
-    def visit_terminal(self, node):
+    def visit_terminal(self, node) -> Any:
         pass
 
     @abstractmethod
-    def visit_sequence(self, node):
+    def visit_sequence(self, node) -> Any:
         pass
 
     @abstractmethod
-    def visit_choice(self, node):
+    def visit_choice(self, node) -> Any:
         pass
 
     # visit_non_terminal will come in Step 3
