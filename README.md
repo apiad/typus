@@ -127,4 +127,4 @@ Typus is agnostic to the output format.
 
 ## 📄 License
 
-MIT License. See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
+MIT License. See [LICENSE](LICENSE) for details.
