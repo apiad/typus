@@ -25,7 +25,7 @@ uv add typus-dsl
 
 ## ⚡ Quick Start
 
-### 1\. Basic: Semantic Versioning (SemVer)
+### 1. Basic: Semantic Versioning (SemVer)
 
 Define a grammar to validate version strings like `v1.0.2` or `v2.10.0-rc1`.
 
@@ -51,7 +51,7 @@ g.root = "v" + g.version_core + g.prerelease
 print(g.compile("gbnf"))
 ```
 
-### 2\. Advanced: Structured Function Calling
+### 2. Advanced: Structured Function Calling
 
 Define a grammar for an Agent tool call, like `search_tool(query="foo", limit=5)`.
 This demonstrates handling **recursion** and **lists** automatically.
