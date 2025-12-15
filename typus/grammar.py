@@ -1,4 +1,5 @@
 from typing import Dict, Union, Optional, Callable
+import re
 from typus.core import Symbol, Terminal, NonTerminal, Sequence, Choice, Epsilon
 from .backends.base import Compiler
 
@@ -15,23 +16,16 @@ class Grammar:
     def __init__(self):
         self.rules: Dict[str, Symbol] = {}
         self.root: Optional[Symbol] = None
-        self._anon_count = 0
 
     @classmethod
     def register(cls, name: str, factory: VisitorFactory):
-        """
-        Registers a new backend compiler.
-        Args:
-            name: The key to use in compile(backend=name)
-            factory: A class or function that accepts **kwargs and returns a visitor instance.
-        """
         cls._backends[name] = factory
 
     def __getattr__(self, name: str) -> NonTerminal:
         return NonTerminal(name)
 
     def __setattr__(self, name: str, value: Union[Symbol, str]):
-        if name in ("rules", "root", "_backends", "_anon_count"):
+        if name in ("rules", "root", "_backends"):
             super().__setattr__(name, value)
             return
 
@@ -43,26 +37,12 @@ class Grammar:
 
         self.rules[name] = value
 
-    def regex(self, pattern: str) -> Terminal:
-        """
-        Creates a Terminal that is treated as a raw regex pattern.
-        Note: The pattern syntax depends on the backend (e.g. GBNF).
-        """
-        return Terminal(pattern, is_regex=True)
-
-    def compile(self, backend: str | Compiler = "gbnf", **kwargs) -> str:
-        """
-        Compiles the grammar using the requested backend.
-        Any extra kwargs are passed to the backend constructor.
-        """
-        if backend not in self._backends:
-            known = ", ".join(self._backends.keys())
-            raise ValueError(f"Unknown backend: '{backend}'. Available: {known}")
-
+    def compile(self, backend: Union[str, Compiler] = "gbnf", **kwargs) -> str:
         if isinstance(backend, str):
+            if backend not in self._backends:
+                known = ", ".join(self._backends.keys())
+                raise ValueError(f"Unknown backend: '{backend}'. Available: {known}")
             backend = self._backends[backend](**kwargs)
-
-        # Instantiate the compiler with user options (e.g., indent=2)
 
         if self.root is None:
             raise RuntimeError("No root symbol defined")
@@ -71,49 +51,88 @@ class Grammar:
 
     # --- High-Level Builders ---
 
-    def _gen_name(self, prefix: str) -> str:
-        self._anon_count += 1
-        return f"_{prefix}_{self._anon_count}"
+    def regex(self, pattern: str) -> Terminal:
+        return Terminal(pattern, is_regex=True)
 
     def maybe(self, symbol: Union[Symbol, str]) -> Choice:
-        """
-        Optional: symbol | ε
-        """
+        """Optional: symbol | ε"""
         if isinstance(symbol, str):
             symbol = Terminal(symbol)
         return Choice(symbol, Epsilon())
 
+    def _sanitize(self, text: str) -> str:
+        """Converts arbitrary text into a valid GBNF-friendly identifier part."""
+        # Replace non-alphanumeric chars with underscore
+        clean = re.sub(r"[^a-zA-Z0-9]", "_", text)
+        # Collapse multiple underscores
+        clean = re.sub(r"__+", "_", clean)
+        return clean.strip("_")
+
+    def _get_name(self, symbol: Symbol) -> str:
+        """Derives a stable, readable name for a symbol."""
+        if isinstance(symbol, NonTerminal):
+            return symbol.name
+        if isinstance(symbol, Terminal):
+            if symbol.is_regex:
+                return "regex"
+            return self._sanitize(symbol.value)
+        if isinstance(symbol, Choice):
+            # Try to name Choice(A, B) as "A_or_B"
+            parts = [self._get_name(opt) for opt in symbol.options]
+            return "_or_".join(parts)
+        return "item"
+
     def some(
-        self, symbol: Union[Symbol, str], sep: Union[Symbol, str, None] = None
+        self,
+        symbol: Union[Symbol, str],
+        sep: Union[Symbol, str, None] = None,
+        name: Optional[str] = None,
     ) -> NonTerminal:
         """
         OneOrMore: symbol (sep symbol)*
-        Implemented as recursive rule:
-            R ::= symbol | symbol sep R
+
+        Args:
+            name: Explicit rule name. If None, derives 'some_{symbol}[_sep_{sep}]'.
+
+        Raises:
+            ValueError: If a rule with the target name already exists.
         """
         if isinstance(symbol, str):
             symbol = Terminal(symbol)
 
-        name = self._gen_name("some")
-        ref = NonTerminal(name)
+        # 1. Determine Name
+        if name is None:
+            sym_name = self._get_name(symbol)
+            name = f"some_{sym_name}"
 
+            if sep:
+                if isinstance(sep, str):
+                    sep = Terminal(sep)
+                sep_name = self._get_name(sep)
+                if sep_name:
+                    name += f"_sep_{sep_name}"
+
+        # 2. Strict Uniqueness Check
+        if name in self.rules:
+            raise ValueError(f"Rule '{name}' already exists.")
+
+        # 3. Define the Recursive Rule
+        ref = NonTerminal(name)
         if sep:
-            if isinstance(sep, str):
-                sep = Terminal(sep)
             # R ::= symbol | symbol + sep + R
-            self.rules[name] = symbol | symbol + sep + ref
+            self.rules[name] = Choice(symbol, symbol + sep + ref)
         else:
             # R ::= symbol | symbol + R
-            self.rules[name] = symbol | symbol + ref
+            self.rules[name] = Choice(symbol, symbol + ref)
 
         return ref
 
     def any(
-        self, symbol: Union[Symbol, str], sep: Union[Symbol, str, None] = None
+        self,
+        symbol: Union[Symbol, str],
+        sep: Union[Symbol, str, None] = None,
+        name: Optional[str] = None,
     ) -> Choice:
-        """
-        ZeroOrMore: (symbol (sep symbol)*)?
-        Implemented as:
-            maybe(some(symbol, sep))
-        """
-        return self.maybe(self.some(symbol, sep))
+        """ZeroOrMore: (symbol (sep symbol)*)?"""
+        # We pass the explicit name to some(), which will enforce the uniqueness check
+        return self.maybe(self.some(symbol, sep, name=name))

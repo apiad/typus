@@ -1,3 +1,4 @@
+import pytest
 from typing import cast
 from typus import Grammar
 from typus.core import Terminal, Sequence, Choice, Epsilon, NonTerminal
@@ -57,5 +58,46 @@ def test_gbnf_output_quantifiers():
 
     # Check for empty string (epsilon)
     assert '""' in output
+
     # Check for recursion
     assert '::= ( "A" | "A" ","' in output
+
+
+def test_some_explicit_name():
+    """Test that g.some(..., name='my_list') uses the explicit name."""
+    g = Grammar()
+    g.word = "foo"
+
+    ref = g.some(g.word, name="custom_list_name")
+
+    assert ref.name == "custom_list_name"
+    assert "custom_list_name" in g.rules
+
+
+def test_some_collision_error():
+    """Test that defining the same list twice raises ValueError."""
+    g = Grammar()
+    g.item = "A"
+
+    # First definition works
+    g.some(g.item)
+    assert "some_item" in g.rules
+
+    # Second definition should crash (Strict Mode)
+    with pytest.raises(ValueError, match="Rule 'some_item' already exists"):
+        g.some(g.item)
+
+
+def test_any_delegates_name():
+    """Test that g.any(..., name='foo') passes name to g.some()."""
+    g = Grammar()
+
+    # g.any calls g.some internally
+    g.any("A", name="my_zeros")
+
+    # "my_zeros" should be the name of the recursive rule created by some()
+    assert "my_zeros" in g.rules
+
+    # Calling it again should crash
+    with pytest.raises(ValueError):
+        g.any("A", name="my_zeros")
