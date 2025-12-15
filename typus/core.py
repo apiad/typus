@@ -46,6 +46,19 @@ class Terminal(Symbol):
         return f"{kind}({self.value!r})"
 
 
+class Epsilon(Symbol):
+    """
+    Represents the Empty String (ε).
+    It produces no tokens and effectively disappears in Sequences.
+    """
+
+    def accept[T](self, visitor: "Compiler[T]") -> T:
+        return visitor.visit_epsilon(self)
+
+    def __repr__(self):
+        return "Epsilon()"
+
+
 class Sequence(Symbol):
     """A sequence of symbols (A + B)."""
 
@@ -54,10 +67,11 @@ class Sequence(Symbol):
 
         for item in items:
             if isinstance(item, Sequence):
-                # FLATTENING: Sequence(Sequence(A, B), C) -> Sequence(A, B, C)
                 self.items.extend(item.items)
+            elif isinstance(item, Epsilon):
+                # Optimization: A + Epsilon -> A
+                pass
             elif isinstance(item, str):
-                # PROMOTION: Sequence("A", B) -> Sequence(Terminal("A"), B)
                 self.items.append(Terminal(item))
             else:
                 self.items.append(item)

@@ -1,5 +1,5 @@
 from typing import Dict
-from typus.core import Symbol, Terminal, NonTerminal, Sequence, Choice
+from typus.core import Epsilon, Symbol, Terminal, NonTerminal, Sequence, Choice
 from typus.backends.base import Compiler
 from typus.grammar import Grammar
 
@@ -35,6 +35,9 @@ class GBNFCompiler(Compiler[str]):
 
     def visit_rule(self, head: NonTerminal, body: Symbol) -> str:
         return f"{head.name} ::= {body.accept(self)}"
+
+    def visit_epsilon(self, node: Epsilon) -> str:
+        return '""'
 
     def compile(self, grammar: Grammar) -> str:
         lines = []
