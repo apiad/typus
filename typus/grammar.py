@@ -1,10 +1,7 @@
-from typing import Dict, Union, Optional, Type, Callable, Any, TYPE_CHECKING
-from typus.core import Symbol, Terminal, NonTerminal
-
-
+from typing import Dict, Union, Optional, Callable
+from typus.core import Symbol, Terminal, NonTerminal, Sequence, Choice, Epsilon
 from .backends.base import Compiler
 
-# A Factory is anything callable that returns a visitor (Class or Function)
 VisitorFactory = Callable[..., Compiler]
 
 
@@ -18,6 +15,7 @@ class Grammar:
     def __init__(self):
         self.rules: Dict[str, Symbol] = {}
         self.root: Optional[Symbol] = None
+        self._anon_count = 0
 
     @classmethod
     def register(cls, name: str, factory: VisitorFactory):
@@ -33,7 +31,7 @@ class Grammar:
         return NonTerminal(name)
 
     def __setattr__(self, name: str, value: Union[Symbol, str]):
-        if name in ("rules", "root", "_backends"):
+        if name in ("rules", "root", "_backends", "_anon_count"):
             super().__setattr__(name, value)
             return
 
@@ -63,3 +61,52 @@ class Grammar:
             raise RuntimeError("No root symbol defined")
 
         return backend.compile(self)
+
+    # --- High-Level Builders ---
+
+    def _gen_name(self, prefix: str) -> str:
+        self._anon_count += 1
+        return f"_{prefix}_{self._anon_count}"
+
+    def maybe(self, symbol: Union[Symbol, str]) -> Choice:
+        """
+        Optional: symbol | ε
+        """
+        if isinstance(symbol, str):
+            symbol = Terminal(symbol)
+        return Choice(symbol, Epsilon())
+
+    def some(
+        self, symbol: Union[Symbol, str], sep: Union[Symbol, str, None] = None
+    ) -> NonTerminal:
+        """
+        OneOrMore: symbol (sep symbol)*
+        Implemented as recursive rule:
+            R ::= symbol | symbol sep R
+        """
+        if isinstance(symbol, str):
+            symbol = Terminal(symbol)
+
+        name = self._gen_name("some")
+        ref = NonTerminal(name)
+
+        if sep:
+            if isinstance(sep, str):
+                sep = Terminal(sep)
+            # R ::= symbol | symbol + sep + R
+            self.rules[name] = symbol | symbol + sep + ref
+        else:
+            # R ::= symbol | symbol + R
+            self.rules[name] = symbol | symbol + ref
+
+        return ref
+
+    def any(
+        self, symbol: Union[Symbol, str], sep: Union[Symbol, str, None] = None
+    ) -> Choice:
+        """
+        ZeroOrMore: (symbol (sep symbol)*)?
+        Implemented as:
+            maybe(some(symbol, sep))
+        """
+        return self.maybe(self.some(symbol, sep))
