@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from .backends.base import GrammarVisitor
+    from .backends.base import Compiler
 
 
 class Symbol(ABC):
@@ -12,7 +12,7 @@ class Symbol(ABC):
     """
 
     @abstractmethod
-    def accept[T](self, visitor: "GrammarVisitor[T]") -> T:
+    def accept[T](self, visitor: "Compiler[T]") -> T:
         pass
 
 
@@ -23,7 +23,7 @@ class Terminal(Symbol):
         self.value = value
         self.is_regex = is_regex
 
-    def accept(self, visitor: "GrammarVisitor"):
+    def accept(self, visitor: "Compiler"):
         return visitor.visit_terminal(self)
 
     def __repr__(self):
@@ -37,7 +37,7 @@ class Sequence(Symbol):
     def __init__(self, *items: Symbol):
         self.items = list(items)
 
-    def accept(self, visitor: "GrammarVisitor"):
+    def accept(self, visitor: "Compiler"):
         return visitor.visit_sequence(self)
 
 
@@ -47,7 +47,7 @@ class Choice(Symbol):
     def __init__(self, *options: Symbol):
         self.options = list(options)
 
-    def accept(self, visitor: "GrammarVisitor"):
+    def accept(self, visitor: "Compiler"):
         return visitor.visit_choice(self)
 
 
@@ -57,7 +57,7 @@ class NonTerminal(Symbol):
     def __init__(self, name: str):
         self.name = name
 
-    def accept(self, visitor: "GrammarVisitor"):
+    def accept(self, visitor: "Compiler"):
         return visitor.visit_non_terminal(self)
 
     def __repr__(self):

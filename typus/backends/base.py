@@ -1,27 +1,20 @@
 from abc import ABC, abstractmethod
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Protocol
+
+from typus.grammar import Grammar
 
 if TYPE_CHECKING:
-    from ..core import Terminal, NonTerminal, Sequence, Choice
+    from ..core import Terminal, NonTerminal, Sequence, Choice, Symbol
 
 
-class GrammarVisitor[T](ABC):
+class Compiler[T](Protocol):
     """
-    Abstract Base Class for all compilers (GBNF, JsonSchema, Lark).
+    Protocol for all compilers (GBNF, JsonSchema, Lark).
     """
 
-    @abstractmethod
-    def visit_terminal(self, node: "Terminal") -> T:
-        pass
-
-    @abstractmethod
-    def visit_sequence(self, node: "Sequence") -> T:
-        pass
-
-    @abstractmethod
-    def visit_choice(self, node: "Choice") -> T:
-        pass
-
-    @abstractmethod
-    def visit_non_terminal(self, node: "NonTerminal") -> T:
-        pass
+    def visit_terminal(self, node: "Terminal") -> T: ...
+    def visit_sequence(self, node: "Sequence") -> T: ...
+    def visit_choice(self, node: "Choice") -> T: ...
+    def visit_non_terminal(self, node: "NonTerminal") -> T: ...
+    def visit_rule(self, head: "NonTerminal", body: "Symbol") -> T: ...
+    def compile(self, grammar: "Grammar") -> T: ...

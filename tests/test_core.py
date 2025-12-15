@@ -1,9 +1,9 @@
 from typing import Any
 from typus.core import Terminal, Sequence, Choice, NonTerminal
-from typus.backends.base import GrammarVisitor
+from typus.backends.base import Compiler
 
 
-class DebugVisitor(GrammarVisitor[str]):
+class DebugVisitor(Compiler[str]):
     """A simple visitor to verify tree structure in tests."""
 
     def visit_terminal(self, node: Terminal):

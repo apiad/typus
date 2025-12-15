@@ -2,11 +2,10 @@ from typing import Dict, Union, Optional, Type, Callable, Any, TYPE_CHECKING
 from typus.core import Symbol, Terminal, NonTerminal
 
 
-if TYPE_CHECKING:
-    from .backends.base import GrammarVisitor
+from .backends.base import Compiler
 
-    # A Factory is anything callable that returns a visitor (Class or Function)
-    VisitorFactory = Callable[..., GrammarVisitor]
+# A Factory is anything callable that returns a visitor (Class or Function)
+VisitorFactory = Callable[..., Compiler]
 
 
 class Grammar:
@@ -46,7 +45,7 @@ class Grammar:
 
         self.rules[name] = value
 
-    def compile(self, backend: str | GrammarVisitor = "gbnf", **kwargs) -> str:
+    def compile(self, backend: str | Compiler = "gbnf", **kwargs) -> str:
         """
         Compiles the grammar using the requested backend.
         Any extra kwargs are passed to the backend constructor.
@@ -63,4 +62,4 @@ class Grammar:
         if self.root is None:
             raise RuntimeError("No root symbol defined")
 
-        return self.root.accept(backend)
+        return backend.compile(self)
