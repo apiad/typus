@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, List
 
 
 if TYPE_CHECKING:
@@ -18,23 +18,16 @@ class Symbol(ABC):
     # --- Operator Overloading ---
 
     def __add__(self, other: Union["Symbol", str]) -> "Sequence":
-        if isinstance(other, str):
-            other = Terminal(other)
+        # This calls Sequence(self, other), which will trigger flattening logic
         return Sequence(self, other)
 
     def __radd__(self, other: Union["Symbol", str]) -> "Sequence":
-        if isinstance(other, str):
-            other = Terminal(other)
         return Sequence(other, self)
 
     def __or__(self, other: Union["Symbol", str]) -> "Choice":
-        if isinstance(other, str):
-            other = Terminal(other)
         return Choice(self, other)
 
     def __ror__(self, other: Union["Symbol", str]) -> "Choice":
-        if isinstance(other, str):
-            other = Terminal(other)
         return Choice(other, self)
 
 
@@ -56,8 +49,18 @@ class Terminal(Symbol):
 class Sequence(Symbol):
     """A sequence of symbols (A + B)."""
 
-    def __init__(self, *items: Symbol):
-        self.items = list(items)
+    def __init__(self, *items: Union[Symbol, str]):
+        self.items: List[Symbol] = []
+
+        for item in items:
+            if isinstance(item, Sequence):
+                # FLATTENING: Sequence(Sequence(A, B), C) -> Sequence(A, B, C)
+                self.items.extend(item.items)
+            elif isinstance(item, str):
+                # PROMOTION: Sequence("A", B) -> Sequence(Terminal("A"), B)
+                self.items.append(Terminal(item))
+            else:
+                self.items.append(item)
 
     def accept(self, visitor: "Compiler"):
         return visitor.visit_sequence(self)
@@ -66,8 +69,17 @@ class Sequence(Symbol):
 class Choice(Symbol):
     """A choice between symbols (A | B)."""
 
-    def __init__(self, *options: Symbol):
-        self.options = list(options)
+    def __init__(self, *options: Union[Symbol, str]):
+        self.options: List[Symbol] = []
+
+        for opt in options:
+            if isinstance(opt, Choice):
+                # FLATTENING: Choice(Choice(A, B), C) -> Choice(A, B, C)
+                self.options.extend(opt.options)
+            elif isinstance(opt, str):
+                self.options.append(Terminal(opt))
+            else:
+                self.options.append(opt)
 
     def accept(self, visitor: "Compiler"):
         return visitor.visit_choice(self)
