@@ -28,7 +28,7 @@ uv add typus-dsl
 
 ## ⚡ Quick Start
 
-### 1\. Basic Grammar
+### 1. Basic Grammar
 
 Define a grammar where a "User" has a name (Alice or Bob) and an ID.
 
@@ -50,7 +50,7 @@ g.root = "User: " + g.name + " (" + g.id + ")"
 print(g.compile("gbnf"))
 ```
 
-### 2\. Using High-Level Builders (`maybe`, `some`, `any`)
+### 2. Using High-Level Builders (`maybe`, `some`, `any`)
 
 Typus handles the complex recursion logic for lists and optional items for you.
 
@@ -91,7 +91,7 @@ Typus follows a strict **Layered Architecture** to ensure security and flexibili
 The atomic units of the grammar. These are pure data structures.
 
   * **Terminal**: A string literal or regex.
-  * **Sequence (`+`)**: `A + B`. Optimized to flatten automatically (`(A+B)+C` -\> `A+B+C`).
+  * **Sequence (`+`)**: `A + B`. Optimized to flatten automatically (`(A+B)+C` -> `A+B+C`).
   * **Choice (`|`)**: `A | B`.
   * **Epsilon**: The empty string ($\epsilon$).
   * **NonTerminal**: A reference to another rule (allowing recursion).

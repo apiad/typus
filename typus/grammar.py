@@ -43,6 +43,13 @@ class Grammar:
 
         self.rules[name] = value
 
+    def regex(self, pattern: str) -> Terminal:
+        """
+        Creates a Terminal that is treated as a raw regex pattern.
+        Note: The pattern syntax depends on the backend (e.g. GBNF).
+        """
+        return Terminal(pattern, is_regex=True)
+
     def compile(self, backend: str | Compiler = "gbnf", **kwargs) -> str:
         """
         Compiles the grammar using the requested backend.
