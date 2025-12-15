@@ -14,7 +14,7 @@ It solves the **Backend Fragmentation** problem. Define your grammar *once* in P
   * **🏗️ High-Level Builders**: Helpers like `maybe()`, `some()`, and `any()` that handle recursion automatically.
   * **⚙️ GBNF Backend**: Out-of-the-box support for `llama.cpp` grammars.
   * **🔌 Plugin Architecture**: Easily register custom backends without modifying the core.
-
+d
 ## 📦 Installation
 
 ```bash
@@ -22,52 +22,62 @@ pip install typus-dsl
 # or with uv
 uv add typus-dsl
 ```
-
+d
 ## ⚡ Quick Start
 
-### 1. Basic Grammar with Regex
+### 1\. Basic: Semantic Versioning (SemVer)
 
-Define a grammar where a "User" has a name (Alice or Bob) and an ID (regex pattern).
+Define a grammar to validate version strings like `v1.0.2` or `v2.10.0-rc1`.
 
 ```python
 from typus import Grammar
 
 g = Grammar()
 
-# Define terminals and rules using Python operators
-# | = Choice
-# + = Sequence
-g.name = "Alice" | "Bob"
+# 1. Define atomic components with Regex
+# "0" or "1-9" followed by digits (no leading zeros allowed)
+g.digits = g.regex(r"(0|[1-9][0-9]*)")
 
-# Use Regex for patterns
-g.id   = "ID-" + g.regex(r"[0-9]{4}")
+# 2. Structure the version core: X.Y.Z
+g.version_core = g.digits + "." + g.digits + "." + g.digits
 
-# Define the root rule
-g.root = "User: " + g.name + " (" + g.id + ")"
+# 3. Handle optional pre-release tag (e.g. "-alpha", "-rc1")
+# maybe(x) -> x | ε
+g.prerelease = g.maybe("-" + g.regex(r"[0-9A-Za-z-]+"))
 
-# Compile to GBNF
+# 4. Assemble the root rule
+g.root = "v" + g.version_core + g.prerelease
+
 print(g.compile("gbnf"))
 ```
 
-### 2. Using High-Level Builders (`maybe`, `some`, `any`)
+### 2\. Advanced: Structured Function Calling
 
-Typus handles the complex recursion logic for lists and optional items for you.
+Define a grammar for an Agent tool call, like `search_tool(query="foo", limit=5)`.
+This demonstrates handling **recursion** and **lists** automatically.
 
 ```python
 from typus import Grammar
 
 g = Grammar()
 
-# 1. Optionality (?): maybe(x) -> x | ε
-g.greeting = g.maybe("Hello, ")
+# 1. Define primitives
+g.identifier = g.regex(r"[a-zA-Z_][a-zA-Z0-9_]*")
+g.string_lit = '"' + g.regex(r'[^"]*') + '"'
+g.number_lit = g.regex(r"[0-9]+")
 
-# 2. One-or-More (+): some(x) -> x (sep x)*
-g.numbers = g.some(g.regex(r"[0-9]+"), sep=",")
+# 2. Define a generic "Value" (String or Number)
+g.value = g.string_lit | g.number_lit
 
-# 3. Zero-or-More (*): any(x) -> (x (sep x)*)?
-g.json_list = "[" + g.any("value", sep=", ") + "]"
+# 3. Define a named argument: name=value
+g.arg = g.identifier + "=" + g.value
 
-g.root = g.greeting + g.numbers + g.json_list
+# 4. Define the Argument List
+# any(x, sep) -> (x (sep x)*)?  <-- Handles the recursion/separation logic
+g.arg_list = g.any(g.arg, sep=", ")
+
+# 5. Root: name(args)
+g.root = g.identifier + "(" + g.arg_list + ")"
 
 print(g.compile("gbnf"))
 ```
@@ -75,11 +85,15 @@ print(g.compile("gbnf"))
 **Output (GBNF):**
 
 ```gbnf
-root ::= ( "Hello, " | "" ) _some_1 "[" ( _some_2 | "" ) "]"
-_some_1 ::= [0-9]+ | [0-9]+ "," _some_1
-_some_2 ::= "value" | "value" ", " _some_2
+root ::= [a-zA-Z_][a-zA-Z0-9_]* "(" ( _some_1 | "" ) ")"
+identifier ::= [a-zA-Z_][a-zA-Z0-9_]*
+value ::= ( string-lit | number-lit )
+string-lit ::= "\"" [^"]* "\""
+number-lit ::= [0-9]+
+arg ::= identifier "=" value
+_some_1 ::= arg | arg ", " _some_1
 ```
-
+d
 ## 🏗 Architecture
 
 Typus follows a strict **Layered Architecture** to ensure security and flexibility.
@@ -89,7 +103,7 @@ Typus follows a strict **Layered Architecture** to ensure security and flexibili
 The atomic units of the grammar. These are pure data structures.
 
   * **Terminal**: A string literal or regex.
-  * **Sequence (`+`)**: `A + B`. Optimized to flatten automatically (`(A+B)+C` -> `A+B+C`).
+  * **Sequence (`+`)**: `A + B`. Optimized to flatten automatically (`(A+B)+C` -\> `A+B+C`).
   * **Choice (`|`)**: `A | B`.
   * **Epsilon**: The empty string ($\epsilon$).
   * **NonTerminal**: A reference to another rule (allowing recursion).
@@ -109,7 +123,7 @@ Typus is agnostic to the output format.
   * **GBNF**: Included by default. Handles escaping and rule naming conventions.
   * *(Planned)* **JSON Schema**: For OpenAI/Anthropic structured outputs.
   * *(Planned)* **Lark**: For validation and parsing.
-
+d
 ## 🛣 Roadmap
 
   * [x] **v0.1**: Core AST, Operators, GBNF Backend.
@@ -118,7 +132,7 @@ Typus is agnostic to the output format.
   * [ ] **v0.4**: `typus.data` (SQL generators & DB reflection).
   * [ ] **v0.5**: `typus.structure` (XML & Structure generators).
   * [ ] **v0.6**: `typus.functional` (Python & S-expression generators).
-
+d
 ## 📄 License
 
 MIT License. See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
