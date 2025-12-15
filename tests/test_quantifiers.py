@@ -1,3 +1,4 @@
+from typing import cast
 from typus import Grammar
 from typus.core import Terminal, Sequence, Choice, Epsilon, NonTerminal
 
@@ -29,7 +30,7 @@ def test_some_recursion():
     # Check recursion structure: A | A + Ref
     recurse = rule.options[1]
     assert isinstance(recurse, Sequence)
-    assert recurse.items[1].name == generated_name
+    assert cast(NonTerminal, recurse.items[1]).name == generated_name
 
 
 def test_any_structure():
