@@ -89,7 +89,7 @@ Typus follows a strict **Layered Architecture** to ensure security and flexibili
 The atomic units of the grammar. These are pure data structures.
 
   * **Terminal**: A string literal or regex.
-  * **Sequence (`+`)**: `A + B`. Optimized to flatten automatically (`(A+B)+C` -\> `A+B+C`).
+  * **Sequence (`+`)**: `A + B`. Optimized to flatten automatically (`(A+B)+C` -> `A+B+C`).
   * **Choice (`|`)**: `A | B`.
   * **Epsilon**: The empty string ($\epsilon$).
   * **NonTerminal**: A reference to another rule (allowing recursion).
