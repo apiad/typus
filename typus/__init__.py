@@ -1,4 +1,11 @@
-from .grammar import Grammar
-
-
 __version__ = "0.0.1"
+
+from .grammar import Grammar
+from .backends.gbnf import GBNFCompiler
+
+# ---------------------------------------------------------
+# Default Backend Registration
+# ---------------------------------------------------------
+# This allows 'g.compile("gbnf")' to work out of the box
+# without the Grammar class depending on GBNFCompiler.
+Grammar.register("gbnf", GBNFCompiler)

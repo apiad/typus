@@ -1,40 +1,66 @@
-from typing import Dict, Union
-from typus.core import Symbol, Terminal, NonTerminal, Sequence, Choice
+from typing import Dict, Union, Optional, Type, Callable, Any, TYPE_CHECKING
+from typus.core import Symbol, Terminal, NonTerminal
+
+
+if TYPE_CHECKING:
+    from .backends.base import GrammarVisitor
+
+    # A Factory is anything callable that returns a visitor (Class or Function)
+    VisitorFactory = Callable[..., GrammarVisitor]
 
 
 class Grammar:
     """
     The main container for defining rules.
-    Usage:
-        g = Grammar()
-        g.start = Terminal("Hello")
     """
 
+    _backends: Dict[str, VisitorFactory] = {}
+
     def __init__(self):
-        # We store the actual rule definitions here
         self.rules: Dict[str, Symbol] = {}
-        self.root: Symbol | None = None
+        self.root: Optional[Symbol] = None
+
+    @classmethod
+    def register(cls, name: str, factory: VisitorFactory):
+        """
+        Registers a new backend compiler.
+        Args:
+            name: The key to use in compile(backend=name)
+            factory: A class or function that accepts **kwargs and returns a visitor instance.
+        """
+        cls._backends[name] = factory
 
     def __getattr__(self, name: str) -> NonTerminal:
-        """
-        Allows forward references: g.expr usage creates a NonTerminal('expr').
-        """
         return NonTerminal(name)
 
     def __setattr__(self, name: str, value: Union[Symbol, str]):
-        """
-        Defining a rule: g.rule = ...
-        """
-        if name in ("rules", "root"):
+        if name in ("rules", "root", "_backends"):
             super().__setattr__(name, value)
             return
 
-        # Auto-convert string literals to Terminals
         if isinstance(value, str):
             value = Terminal(value)
 
-        # Determine the root automatically (first rule defined is root by default)
         if not self.rules:
             self.root = value
 
         self.rules[name] = value
+
+    def compile(self, backend: str | GrammarVisitor = "gbnf", **kwargs) -> str:
+        """
+        Compiles the grammar using the requested backend.
+        Any extra kwargs are passed to the backend constructor.
+        """
+        if backend not in self._backends:
+            known = ", ".join(self._backends.keys())
+            raise ValueError(f"Unknown backend: '{backend}'. Available: {known}")
+
+        if isinstance(backend, str):
+            backend = self._backends[backend](**kwargs)
+
+        # Instantiate the compiler with user options (e.g., indent=2)
+
+        if self.root is None:
+            raise RuntimeError("No root symbol defined")
+
+        return self.root.accept(backend)
