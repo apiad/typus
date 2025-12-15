@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 
 if TYPE_CHECKING:
@@ -14,6 +14,28 @@ class Symbol(ABC):
     @abstractmethod
     def accept[T](self, visitor: "Compiler[T]") -> T:
         pass
+
+    # --- Operator Overloading ---
+
+    def __add__(self, other: Union["Symbol", str]) -> "Sequence":
+        if isinstance(other, str):
+            other = Terminal(other)
+        return Sequence(self, other)
+
+    def __radd__(self, other: Union["Symbol", str]) -> "Sequence":
+        if isinstance(other, str):
+            other = Terminal(other)
+        return Sequence(other, self)
+
+    def __or__(self, other: Union["Symbol", str]) -> "Choice":
+        if isinstance(other, str):
+            other = Terminal(other)
+        return Choice(self, other)
+
+    def __ror__(self, other: Union["Symbol", str]) -> "Choice":
+        if isinstance(other, str):
+            other = Terminal(other)
+        return Choice(other, self)
 
 
 class Terminal(Symbol):
