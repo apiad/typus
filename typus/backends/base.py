@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, TYPE_CHECKING, Protocol
 
-from typus.grammar import Grammar
 
 if TYPE_CHECKING:
     from ..core import Terminal, NonTerminal, Sequence, Choice, Symbol
+    from ..grammar import Grammar
 
 
 class Compiler[T](Protocol):
