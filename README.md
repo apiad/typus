@@ -14,7 +14,7 @@ It solves the **Backend Fragmentation** problem. Define your grammar *once* in P
   * **🏗️ High-Level Builders**: Helpers like `maybe()`, `some()`, and `any()` that handle recursion automatically.
   * **⚙️ GBNF Backend**: Out-of-the-box support for `llama.cpp` grammars.
   * **🔌 Plugin Architecture**: Easily register custom backends without modifying the core.
-d
+
 ## 📦 Installation
 
 ```bash
@@ -22,7 +22,7 @@ pip install typus-dsl
 # or with uv
 uv add typus-dsl
 ```
-d
+
 ## ⚡ Quick Start
 
 ### 1\. Basic: Semantic Versioning (SemVer)
@@ -93,7 +93,7 @@ number-lit ::= [0-9]+
 arg ::= identifier "=" value
 _some_1 ::= arg | arg ", " _some_1
 ```
-d
+
 ## 🏗 Architecture
 
 Typus follows a strict **Layered Architecture** to ensure security and flexibility.
@@ -123,7 +123,7 @@ Typus is agnostic to the output format.
   * **GBNF**: Included by default. Handles escaping and rule naming conventions.
   * *(Planned)* **JSON Schema**: For OpenAI/Anthropic structured outputs.
   * *(Planned)* **Lark**: For validation and parsing.
-d
+
 ## 🛣 Roadmap
 
   * [x] **v0.1**: Core AST, Operators, GBNF Backend.
@@ -132,7 +132,7 @@ d
   * [ ] **v0.4**: `typus.data` (SQL generators & DB reflection).
   * [ ] **v0.5**: `typus.structure` (XML & Structure generators).
   * [ ] **v0.6**: `typus.functional` (Python & S-expression generators).
-d
+
 ## 📄 License
 
 MIT License. See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
