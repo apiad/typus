@@ -91,6 +91,9 @@ class Sequence(Symbol):
             else:
                 self.items.append(item)
 
+        if not self.items:
+            raise ValueError("Empty sequence")
+
     def accept(self, visitor: "Compiler"):
         return visitor.visit_sequence(self)
 
@@ -112,6 +115,9 @@ class Choice(Symbol):
                 self.options.append(Terminal(opt))
             else:
                 self.options.append(opt)
+
+        if not self.options:
+            raise ValueError("Empty choice")
 
     def accept(self, visitor: "Compiler"):
         return visitor.visit_choice(self)

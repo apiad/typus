@@ -92,8 +92,8 @@ class DomainGenerator:
 
         # 2. Build Strict Rule (T ::= Head + FluentChain)
         # This preserves the existing "Type Safe" logic for arguments
-        head_rule = Choice(*heads) if heads else Choice()
-        fluent_choice = Choice(*fluents) if fluents else Choice()
+        head_rule = Choice(*heads) if heads else Epsilon()
+        fluent_choice = Choice(*fluents) if fluents else Epsilon()
 
         # Define Strict Chain Rule: (Fluent)*
         strict_chain_name = f"{ref.name}_Chain"

@@ -114,7 +114,7 @@ class LarkCompiler(Compiler[str]):
         return core
 
     def visit_epsilon(self, node: Epsilon) -> str:
-        assert False, "we should have compiled this away"
+        return ""
 
     def visit_non_terminal(self, node: NonTerminal) -> str:
         return node.name.lower()
