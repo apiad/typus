@@ -1,11 +1,6 @@
-Here is the updated `README.md` for **v0.1.0**.
-
 # Typus (`typus-dsl`)
 
 **Strict typing for loose models.**
-
-[](https://www.google.com/search?q=https://pypi.org/project/typus-dsl/)
-[](https://opensource.org/licenses/MIT)
 
 **Typus** is a Python library for defining Context-Free Grammars (CFGs) programmatically and compiling them into generation constraints for Large Language Models (LLMs).
 
@@ -14,6 +9,7 @@ It solves the **Backend Fragmentation** problem. Define your grammar *once* in P
 ## 🚀 Features
 
   * **🐍 Pythonic DSL**: Define grammars using standard Python operators (`+`, `|`) and attribute access (`g.rule`).
+  * **📝 Structured Templates**: Use standard Python format strings (`"Reason: {thought}"`) to define rigid prompt structures.
   * **🛡️ Type-Safe Core**: A robust AST (`Symbol`, `Terminal`, `Sequence`) that prevents invalid states by construction.
   * **⚡ Regex Support**: First-class support for Regular Expressions using `g.regex()`.
   * **🏗️ High-Level Builders**: Helpers like `maybe()`, `some()`, and `any()` that handle recursion automatically.
@@ -57,7 +53,44 @@ g.root = "v" + g.version_core + g.prerelease
 print(g.compile("gbnf"))
 ```
 
-### 2. Advanced: Structured Function Calling
+### 2. Intermediate: Reasoning & Action (Templates)
+
+Force the LLM to follow a strict "Chain of Thought" structure using `g.template()`.
+
+```python
+from typus import Grammar
+
+g = Grammar()
+
+# 1. Define the dynamic components
+g.thought = g.some(g.regex(r"[^\n]+"), sep="\n")  # One or more lines of text
+g.action  = "SEARCH" | "CALCULATE" | "FINISH"
+g.query   = '"' + g.regex(r"[^\"]+") + '"'
+
+# 2. Use a Template to structure the interaction
+# This mixes static text prompts with grammar rules ({thought}, {action}, {query})
+g.root = g.template(
+    "Thought: {thought}\n"
+    "Action: {action}({query})",
+    thought=g.thought,
+    action=g.action,
+    query=g.query
+)
+
+print(g.compile("gbnf"))
+```
+
+**Output (GBNF):**
+
+```gbnf
+root ::= "Thought: " some_regex_sep_newline "\nAction: " action "(" query ")"
+thought ::= some_regex_sep_newline
+some_regex_sep_newline ::= [^\n]+ | [^\n]+ "\n" some_regex_sep_newline
+action ::= ( "SEARCH" | "CALCULATE" | "FINISH" )
+query ::= "\"" [^"]+ "\""
+```
+
+### 3. Advanced: Structured Function Calling
 
 Define a grammar for an Agent tool call, like `search_tool(query="foo", limit=5)`.
 This demonstrates **recursion**, **lists**, and **explicit naming**.
@@ -121,6 +154,7 @@ The `Grammar` class manages the state. It handles:
 
   * **Lazy Evaluation**: You can use `g.my_rule` before defining it.
   * **Recursion Management**: Generates stable recursive rules for `some()` and `any()`.
+  * **Template Parsing**: Converts Python format strings into grammar sequences.
   * **Backend Dispatch**: Delegates compilation to registered visitors.
 
 ### Layer 3: The Backends (`typus.backends`)
@@ -134,11 +168,10 @@ Typus is agnostic to the output format.
 ## 🛣 Roadmap
 
   * [x] **v0.1**: Core AST, Operators, GBNF Backend.
-  * [x] **v0.2**: Regex support (`g.regex("[0-9]+")`).
+  * [x] **v0.2**: Regex support (`g.regex("[0-9]+")`) & Templates.
   * [ ] **v0.3**: JSON Schema Backend.
-  * [ ] **v0.4**: `typus.data` (SQL generators & DB reflection).
-  * [ ] **v0.5**: `typus.structure` (XML & Structure generators).
-  * [ ] **v0.6**: `typus.functional` (Python & S-expression generators).
+  * [ ] **v0.4**: `typus.domain` (Python Type Reflection).
+  * [ ] **v0.5**: `typus.languages` (Python, HTML, SQL Generators).
 
 ## 📄 License
 
