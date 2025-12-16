@@ -132,7 +132,7 @@ class DomainGenerator:
 
         self.grammar.rules[pipeline_name] = pipeline_rule
 
-    def build(self, *entrypoints: Type) -> Grammar:
+    def build(self, *entrypoints: Type | Callable) -> Grammar:
         nodes = self.reflector.reflect(*entrypoints)
         if not nodes:
             raise ValueError("No types found.")
