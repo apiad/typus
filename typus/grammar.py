@@ -25,15 +25,12 @@ class Grammar:
         return NonTerminal(name)
 
     def __setattr__(self, name: str, value: Union[Symbol, str]):
-        if name in ("rules", "root", "_backends"):
+        if name in ("rules", "_backends"):
             super().__setattr__(name, value)
             return
 
         if isinstance(value, str):
             value = Terminal(value)
-
-        if not self.rules:
-            self.rules["root"] = getattr(self, name)
 
         self.rules[name] = value
 
@@ -44,7 +41,7 @@ class Grammar:
                 raise ValueError(f"Unknown backend: '{backend}'. Available: {known}")
             backend = self._backends[backend](**kwargs)
 
-        if self.root is None:
+        if "root" not in self.rules:
             raise RuntimeError("No root symbol defined")
 
         return backend.compile(self)
