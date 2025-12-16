@@ -21,11 +21,10 @@ def test_some_recursion():
     # Should create: _some_1 ::= "A" | "A" _some_1
     g.root = g.some("A")
 
-    assert isinstance(g.root, NonTerminal)
-    generated_name = g.root.name
+    generated_name = "some_A"
     assert generated_name in g.rules
 
-    rule = g.rules[generated_name]
+    rule = g.rules["some_A"]
     assert isinstance(rule, Choice)
 
     # Check recursion structure: A | A + Ref

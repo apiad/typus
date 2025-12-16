@@ -1,3 +1,4 @@
+from typing import cast
 from typus import Grammar
 from typus.core import Terminal
 
@@ -6,9 +7,9 @@ def test_regex_builder():
     g = Grammar()
     g.root = g.regex(r"[0-9]+")
 
-    assert isinstance(g.root, Terminal)
-    assert g.root.value == r"[0-9]+"
-    assert g.root.is_regex is True
+    assert isinstance(g.rules["root"], Terminal)
+    assert cast(Terminal, g.rules["root"]).value == r"[0-9]+"
+    assert cast(Terminal, g.rules["root"]).is_regex is True
 
 
 def test_regex_gbnf_compilation():
