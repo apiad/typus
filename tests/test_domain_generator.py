@@ -9,7 +9,7 @@ class MockLang(Language):
     def render_primitive(self, ctx, py_type):
         return Terminal(f"<{py_type.__name__}>")
 
-    def render_head(self, ctx, name, args, origin):
+    def render_head(self, ctx, name, args, origin=None):
         # Format: [HEAD:name(arg1, arg2)]
         arg_str = ", ".join(args.keys())  # Just verify we saw args
         return Terminal(f"[HEAD:{name}({arg_str})]")

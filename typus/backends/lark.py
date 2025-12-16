@@ -22,51 +22,97 @@ class LarkCompiler(Compiler[str]):
 
         lines.append(f"start: root")
 
-        # 2. Define all other rules
+        # 2. Other Rules
         for name, symbol in grammar.rules.items():
-            # Lark rules must be lowercase to be tree nodes
-            # (Uppercase are Terminals/Tokens, usually leaves)
-            # For simplicity in this backend, we treat defined rules as lowercase Rules.
-            clean_name = name.lower()
             definition = symbol.accept(self)
-            lines.append(f"{clean_name}: {definition}")
+            # If a rule compiles to nothing (pure epsilon), Lark needs explicit empty
+            if not definition:
+                definition = '""'
+            lines.append(f"{name.lower()}: {definition}")
 
         return "\n".join(lines)
 
     def visit_terminal(self, node: Terminal) -> str:
+        # If it's a literal empty string, treat it effectively as Epsilon for Lark
+        if not node.value and not node.is_regex:
+            return ""
+
         if node.is_regex:
-            # Lark regex syntax: /pattern/
-            # We must escape forward slashes if present
             clean_val = node.value.replace("/", r"\/")
             return f"/{clean_val}/"
 
-        # String literal: "value"
-        # Escape quotes
         clean_val = node.value.replace('"', r"\"")
         return f'"{clean_val}"'
 
     def visit_sequence(self, node: Sequence) -> str:
-        # Lark sequence: item1 item2 item3
-        parts = []
-        for child in node.items:
-            part = child.accept(self)
-            # If a child is a Choice, we must wrap it in parens to preserve precedence
-            # Sequence(Choice(a,b), c) -> (a|b) c
-            if isinstance(child, Choice):
-                part = f"({part})"
-            parts.append(part)
-        return " ".join(parts)
+        # Filter out empty strings (Epsilons)
+        parts = [child.accept(self) for child in node.items]
+        # Remove empty strings resulting from Epsilon or Terminal("")
+        clean_parts = [p for p in parts if p]
+
+        if not clean_parts:
+            return ""  # Sequence of nothings is nothing
+
+        # Join with space
+        # Wrap Choices in parens if they are inside a sequence
+        final_parts = []
+        for child, part in zip(node.items, parts):
+            if not part:
+                continue
+
+            # If child was a Choice and rendered to something containing pipes, wrap it
+            # Simple heuristic: if unquoted '|' in output and not wrapped
+            if isinstance(child, Choice) and len(child.options) > 1:
+                # Check if the child choice collapsed to a single option (e.g. A?)
+                # If it generated (A | B), we need parens: (A | B) C
+                # If it generated A?, we don't strictly need extra parens: A? C
+                # Safer to always wrap if it was a Choice node
+                if "|" in part:
+                    part = f"({part})"
+
+            final_parts.append(part)
+
+        return " ".join(final_parts)
 
     def visit_choice(self, node: Choice) -> str:
-        # Lark choice: opt1 | opt2
-        options = [child.accept(self) for child in node.options]
-        return " | ".join(options)
+        # 1. Separate actual options from Epsilons
+        # We consider Epsilon node OR empty string compilation as "Empty"
+        compiled_opts = []
+        has_epsilon = False
+
+        for child in node.options:
+            if isinstance(child, Epsilon):
+                has_epsilon = True
+            else:
+                res = child.accept(self)
+                if not res:  # It compiled to empty (e.g. Terminal(""))
+                    has_epsilon = True
+                else:
+                    compiled_opts.append(res)
+
+        # 2. Construct the core choice string "A | B"
+        if not compiled_opts:
+            return ""  # All options were epsilon -> Empty
+
+        core = " | ".join(compiled_opts)
+
+        # 3. Handle Epsilon -> Convert to Optional (?)
+        if has_epsilon:
+            if len(compiled_opts) == 1:
+                # Choice(A, Epsilon) -> A?
+                # Check if A is already parenthesized or atomic
+                # (Simple heuristic: wrap if it has spaces)
+                if " " in core and not (core.startswith("(") and core.endswith(")")):
+                    return f"({core})?"
+                return f"{core}?"
+            else:
+                # Choice(A, B, Epsilon) -> (A | B)?
+                return f"({core})?"
+
+        return core
 
     def visit_epsilon(self, node: Epsilon) -> str:
-        # Lark represents empty as empty string literal "" or simply nothing in a choice
-        # explicit "" is safer
-        return '""'
+        return ""
 
     def visit_non_terminal(self, node: NonTerminal) -> str:
-        # Reference to another rule
         return node.name.lower()
