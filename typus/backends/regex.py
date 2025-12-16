@@ -25,13 +25,14 @@ class RegexCompiler(Compiler[str]):
 
     def compile(self, grammar: "Grammar") -> str:
         self.grammar = grammar
+
         if grammar.root is None:
             raise ValueError("Grammar has no root.")
 
         # Start visiting from the root
         # We wrap the final result in ^...$ to ensure full string matching if desired,
         # but usually compilers return the pattern itself. Let's return the raw pattern.
-        return grammar.root.accept(self)
+        return grammar["root"].accept(self)
 
     def visit_terminal(self, node: Terminal) -> str:
         if node.is_regex:

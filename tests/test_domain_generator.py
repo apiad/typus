@@ -57,4 +57,4 @@ def test_generator_structure():
     # DF ::= (Heads...) (DF_Chain)*
     # The generated GBNF usually looks like:
     # DF ::= ( ... ) | ( ... ) DF_Chain_rep
-    assert "DF_Chain" in output
+    assert "DF-Chain" in output

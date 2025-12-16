@@ -21,6 +21,12 @@ class Grammar:
     def register(cls, name: str, factory: VisitorFactory):
         cls._backends[name] = factory
 
+    def __getitem__(self, name: str) -> Symbol:
+        return self.rules[name]
+
+    def __setitem__(self, name: str, rule: Symbol):
+        self.rules[name] = rule
+
     def __getattr__(self, name: str) -> NonTerminal:
         return NonTerminal(name)
 
@@ -204,8 +210,8 @@ class Grammar:
         self.rules = new_rules
 
         # 3. Update Root
-        if self.root:
-            self.root = self._prune_symbol(self.root, epsilon_rules)
+        if self["root"]:
+            self.root = self._prune_symbol(self["root"], epsilon_rules)
 
     def _is_symbol_epsilon(self, sym: Symbol, eps_set: set[str]) -> bool:
         if isinstance(sym, Epsilon):

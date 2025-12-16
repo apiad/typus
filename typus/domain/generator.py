@@ -101,7 +101,7 @@ class DomainGenerator:
         # --- FIX: Only create Chain rule if fluents exist ---
         if fluents:
             self.grammar.rules[strict_chain_name] = fluent_choice
-            strict_chain_ref = self.grammar.any(strict_chain_name)
+            strict_chain_ref = self.grammar.any(NonTerminal(strict_chain_name))
         else:
             # If no fluents, chain is Epsilon. Do NOT add to grammar rules.
             strict_chain_ref = Epsilon()

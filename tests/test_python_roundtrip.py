@@ -42,7 +42,7 @@ def test_parsing_valid_python_code():
 
     print(lark_source)
 
-    parser = Lark(lark_source)
+    parser = Lark(lark_source, parser="lalr")
 
     # Case A: Simple Function Call (Head)
     # read_csv(path="data.csv")
