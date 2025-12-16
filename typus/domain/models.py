@@ -8,6 +8,7 @@ class TypeNode:
     Represents a Node in the Type Graph (a Python Type).
     It collects all known ways to produce an instance of this type.
     """
+
     py_type: type
     name: str
 
@@ -33,6 +34,7 @@ class Transition:
     Represents an Edge in the Type Graph (A Function or Method).
     It transforms a set of inputs (params) into a generic output (return_type).
     """
+
     name: str
 
     # The return type of this function

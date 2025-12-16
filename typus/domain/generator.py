@@ -5,11 +5,13 @@ from typus.domain.models import TypeNode
 from typus.domain.reflector import Reflector
 from typus.languages.protocol import Language, RenderContext
 
+
 class DomainGenerator:
     """
     Compiles a set of Python types into a Grammar using a specific Language strategy.
     Implements the 'Head + Any(Tail)' algorithm to handle method chaining.
     """
+
     def __init__(self, language: Language):
         self.language = language
         self.reflector = Reflector()
@@ -69,11 +71,15 @@ class DomainGenerator:
         self._cache[py_type] = ref
 
         # 5. Build Rule Body
-        self._build_rule_body(node, ref, is_primitive=(py_type in (int, str, float, bool)))
+        self._build_rule_body(
+            node, ref, is_primitive=(py_type in (int, str, float, bool))
+        )
 
         return ref
 
-    def _build_rule_body(self, node: TypeNode, ref: NonTerminal, is_primitive: bool = False):
+    def _build_rule_body(
+        self, node: TypeNode, ref: NonTerminal, is_primitive: bool = False
+    ):
         ctx = RenderContext(self.grammar, self._resolve_type)
         heads = []
         tails = []
@@ -85,8 +91,7 @@ class DomainGenerator:
         for trans in node.producers:
             # Resolve Arguments
             arg_symbols = {
-                k: self._resolve_type(v.py_type)
-                for k, v in trans.params.items()
+                k: self._resolve_type(v.py_type) for k, v in trans.params.items()
             }
 
             # Classification: Is it a Chain Link?
@@ -97,16 +102,23 @@ class DomainGenerator:
                 sym = self.language.render_tail(ctx, trans.name, arg_symbols)
                 tails.append(sym)
             else:
-                sym = self.language.render_head(ctx, trans.name, arg_symbols)
+                # Resolve the origin type if this is a method call
+                origin_sym = None
+                if trans.is_method and trans.origin_type:
+                    origin_sym = self._resolve_type(trans.origin_type.py_type)
+
+                sym = self.language.render_head(
+                    ctx, trans.name, arg_symbols, origin=origin_sym
+                )
                 heads.append(sym)
 
         # 6. Assembly
         if not heads:
-             # If no ways to create it, it's a dead end?
-             # Or maybe it's abstract. For now, empty choice.
-             head_rule = Choice()
+            # If no ways to create it, it's a dead end?
+            # Or maybe it's abstract. For now, empty choice.
+            head_rule = Choice()
         else:
-             head_rule = Choice(*heads)
+            head_rule = Choice(*heads)
 
         if not tails:
             # Simple case: T ::= Head

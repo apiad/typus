@@ -19,11 +19,16 @@ class RenderContext:
 
 class Language(Protocol):
     def render_head(
-        self, ctx: RenderContext, name: str, args: Dict[str, Symbol]
+        self,
+        ctx: RenderContext,
+        name: str,
+        args: Dict[str, Symbol],
+        origin: Symbol | None = None,
     ) -> Symbol:
         """
-        Render a 'Head' (Source) of a chain.
-        e.g. 'DataFrame(...)' or 'func(...)'
+        Render a 'Head' (Source).
+        - If origin is None: "func(args)"
+        - If origin is set:  "origin.method(args)"
         """
         ...
 

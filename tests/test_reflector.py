@@ -1,6 +1,7 @@
 from typing import List
 from typus.domain.reflector import Reflector
 
+
 # --- Domain Definition ---
 class DataFrame:
     def __init__(self, path: str): ...
@@ -8,7 +9,9 @@ class DataFrame:
     def filter(self, q: str) -> "DataFrame": ...
     def count(self) -> int: ...
 
+
 def load_csv(path: str) -> DataFrame: ...
+
 
 # --- Test ---
 def test_reflection_pandas_graph():
@@ -45,5 +48,5 @@ def test_reflection_pandas_graph():
     # Verify metadata on 'filter'
     filter_trans = next(t for t in df_node.producers if t.name == "filter")
     assert filter_trans.is_method
-    assert filter_trans.origin_type == df_node # It comes from DataFrame
-    assert "q" in filter_trans.params # It takes 'q'
+    assert filter_trans.origin_type == df_node  # It comes from DataFrame
+    assert "q" in filter_trans.params  # It takes 'q'

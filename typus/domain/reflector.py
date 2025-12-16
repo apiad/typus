@@ -54,7 +54,14 @@ class Reflector:
 
         # Only queue complex types (classes) for method analysis
         # Primitives (int, str) don't have methods we care about for the grammar
-        if inspect.isclass(origin) and origin not in (str, int, float, bool, list, dict):
+        if inspect.isclass(origin) and origin not in (
+            str,
+            int,
+            float,
+            bool,
+            list,
+            dict,
+        ):
             self._queue.append(node)
 
         return node
@@ -77,25 +84,28 @@ class Reflector:
             # Fallback for when hints fail (e.g. lambdas or partials)
             return
 
-        is_init = (name == "__init__")
+        is_init = name == "__init__"
 
         # 2. Determine Semantics
         if is_init:
             # __init__ is a Constructor.
             # It belongs to the class, but it does NOT consume an instance (no 'self' in DSL).
             # So is_method = False (semantically).
-            if not owner_node: return
+            if not owner_node:
+                return
             return_type = owner_node
-            is_method_call = False # Treat as static factory
-            origin_type = None     # No origin (created from void/args)
+            is_method_call = False  # Treat as static factory
+            origin_type = None  # No origin (created from void/args)
         else:
             # Regular function or method
-            if "return" not in hints: return
+            if "return" not in hints:
+                return
             rt = hints.pop("return")
-            if rt is None or rt is type(None): return
+            if rt is None or rt is type(None):
+                return
             return_type = self._get_or_create_node(rt)
 
-            is_method_call = (owner_node is not None)
+            is_method_call = owner_node is not None
             origin_type = owner_node
 
         # 3. Analyze Parameters
