@@ -1,3 +1,4 @@
+import inspect
 from typing import Callable, Dict, Type, List
 from typus.core import Epsilon, Symbol, Choice, NonTerminal, Terminal
 from typus.grammar import Grammar
@@ -123,59 +124,100 @@ class DomainGenerator:
             self._resolve_type(target_node.py_type)
 
         if exit_options:
-            # Pipeline ::= (Fluent)* ( Choice(Exits) | epsilon )
-            # We use 'maybe' to represent (Exits | epsilon)
-            pipeline_rule = strict_chain_ref + Choice(*exit_options, Epsilon())
+            # FIX: Use maybe() logic instead of Choice(..., Epsilon()) directly
+            # to be friendlier to EBNF generators
+            pipeline_rule = strict_chain_ref + self.grammar.maybe(Choice(*exit_options))
         else:
-            # Dead end: Pipeline ::= (Fluent)*
             pipeline_rule = strict_chain_ref
 
         self.grammar.rules[pipeline_name] = pipeline_rule
 
-    def build(self, *entrypoints: Type | Callable) -> Grammar:
+    def build(self, *entrypoints: Type) -> Grammar:
         nodes = self.reflector.reflect(*entrypoints)
         if not nodes:
             raise ValueError("No types found.")
 
-        # 1. Build all rules (Strict + Pipelines)
+        # 1. Build all rules (Types and Pipelines)
         for node in nodes:
             self._resolve_type(node.py_type)
 
         # 2. Construct Root from Entrypoints
-        # Root ::= Head_T1 Pipeline_T1 | Head_T2 Pipeline_T2 ...
         root_options = []
+
         for entry in entrypoints:
-            node = self.reflector._get_or_create_node(entry)
+            # Case A: Entry is a Class (e.g. DataFrame)
+            if inspect.isclass(entry):
+                node = self.reflector._get_or_create_node(entry)
+                # Find all Constructors for this class
+                heads = self._render_entrypoint_heads(node, target_node=node)
+                pipeline_ref = NonTerminal(f"{node.name}_Pipeline")
 
-            # Re-construct the 'Head' part for the root choice
-            # (We can't reuse T because T includes StrictChain,
-            #  we want Head + Pipeline)
+                if heads:
+                    root_options.append(Choice(*heads) + pipeline_ref)
 
-            # Get Heads specifically for this entrypoint
-            # Note: This is slightly redundant calculation but safer for composition
-            heads = []
-            ctx = RenderContext(self.grammar, self._resolve_type)
-            for trans in node.producers:
-                if not (trans.is_method and trans.origin_type == node):
-                    # It's a Head
-                    origin_sym = None
-                    if trans.is_method and trans.origin_type:
-                        origin_sym = self._resolve_type(trans.origin_type.py_type)
+            # Case B: Entry is a Function (e.g. read_csv)
+            elif callable(entry):
+                # We need to find the node that this function *returns*
+                # The Reflector has analyzed it. We find the transition in the graph.
+                # It will be a producer on some node.
 
+                target_node = None
+                target_trans = None
+
+                # Scan all nodes to find which one has this function as a producer
+                for n in nodes:
+                    for t in n.producers:
+                        # Match by name is weak, but sufficient for v0.4 given typical usage
+                        # Ideally Reflector returns a map of entrypoint -> transition
+                        if t.name == entry.__name__:
+                            target_node = n
+                            target_trans = t
+                            break
+                    if target_node:
+                        break
+
+                if target_node:
+                    # Head is the function call
+                    # Pipeline is the Return Type's pipeline
+                    ctx = RenderContext(self.grammar, self._resolve_type)
                     arg_syms = {
                         k: self._resolve_type(v.py_type)
-                        for k, v in trans.params.items()
+                        for k, v in target_trans.params.items()
                     }
-                    heads.append(
-                        self.language.render_head(
-                            ctx, trans.name, arg_syms, origin=origin_sym
-                        )
-                    )
 
-            head_choice = Choice(*heads)
-            pipeline_ref = NonTerminal(f"{node.name}_Pipeline")
+                    head = self.language.render_head(ctx, target_trans.name, arg_syms)
+                    pipeline_ref = NonTerminal(f"{target_node.name}_Pipeline")
 
-            root_options.append(head_choice + pipeline_ref)
+                    root_options.append(head + pipeline_ref)
+
+        if not root_options:
+            # Fallback: just allow all defined pipelines (loose mode)
+            # This handles cases where entrypoints weren't found or mapped correctly
+            root_options = [NonTerminal(f"{n.name}_Pipeline") for n in nodes]
 
         self.grammar.root = Choice(*root_options)
         return self.grammar
+
+    def _render_entrypoint_heads(
+        self, node: TypeNode, target_node: TypeNode
+    ) -> List[Symbol]:
+        """Helper to render constructors/static factories for a class node."""
+        heads = []
+        ctx = RenderContext(self.grammar, self._resolve_type)
+
+        for trans in node.producers:
+            # Entrypoints are only Heads (not chains)
+            if not (trans.is_method and trans.origin_type == node):
+                origin_sym = None
+                if trans.is_method and trans.origin_type:
+                    origin_sym = self._resolve_type(trans.origin_type.py_type)
+
+                arg_syms = {
+                    k: self._resolve_type(v.py_type) for k, v in trans.params.items()
+                }
+                heads.append(
+                    self.language.render_head(
+                        ctx, trans.name, arg_syms, origin=origin_sym
+                    )
+                )
+        return heads
