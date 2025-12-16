@@ -29,12 +29,12 @@ def test_reflection_pandas_graph():
 
     # --- Check DataFrame Producers ---
     # Should have 3 ways to be created:
-    # 1. __init__ (Constructor)
+    # 1. DataFrame (Constructor)
     # 2. filter (Method on itself)
     # 3. load_csv (Function)
 
     producer_names = {t.name for t in df_node.producers}
-    assert "__init__" in producer_names
+    assert "DataFrame" in producer_names
     assert "filter" in producer_names
     assert "load_csv" in producer_names
 

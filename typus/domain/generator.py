@@ -1,5 +1,5 @@
-from typing import Dict, Type, List
-from typus.core import Symbol, Choice, NonTerminal, Terminal
+from typing import Callable, Dict, Type, List
+from typus.core import Epsilon, Symbol, Choice, NonTerminal, Terminal
 from typus.grammar import Grammar
 from typus.domain.models import TypeNode
 from typus.domain.reflector import Reflector
@@ -18,31 +18,6 @@ class DomainGenerator:
         self.grammar = Grammar()
         # Cache: Python Type -> NonTerminal
         self._cache: Dict[Type, NonTerminal] = {}
-
-    def build(self, *entrypoints: Type) -> Grammar:
-        """
-        Main entrypoint.
-        Reflects on the entrypoints and builds the grammar for the ENTIRE domain.
-        """
-        # 1. Build the Semantic Graph (Reflect on everything reachable)
-        # This finds DF, load, AND int (because count returns it)
-        nodes = self.reflector.reflect(*entrypoints)
-
-        if not nodes:
-            raise ValueError("No types found to generate.")
-
-        # 2. Force generation of rules for ALL discovered types
-        # This ensures 'int' rule is generated with 'count()' option
-        # even if 'int' is not currently an input to anything.
-        for node in nodes:
-            self._resolve_type(node.py_type)
-
-        # 3. Set the Root
-        # We default to the first entrypoint, but the user can change this on the grammar
-        root_type = nodes[0].py_type
-        self.grammar.root = self._resolve_type(root_type)
-
-        return self.grammar
 
     def _resolve_type(self, py_type: Type) -> Symbol:
         # 1. Get the Semantic Node to check for producers
@@ -82,27 +57,29 @@ class DomainGenerator:
     ):
         ctx = RenderContext(self.grammar, self._resolve_type)
         heads = []
-        tails = []
+        fluents = []  # Methods returning T (Fluent)
+        exits = []  # Methods returning U != T (Exit)
 
-        # If it is primitive, the "Literal" representation is one of the Heads
+        # 1. Classify Producers
         if is_primitive:
             heads.append(self.language.render_primitive(ctx, node.py_type))
 
         for trans in node.producers:
-            # Resolve Arguments
             arg_symbols = {
                 k: self._resolve_type(v.py_type) for k, v in trans.params.items()
             }
 
-            # Classification: Is it a Chain Link?
-            # It is a chain link if it's a method AND it returns the same type it originated from.
-            is_chain = trans.is_method and trans.origin_type == node
-
-            if is_chain:
+            # Is it a method on this type?
+            if trans.is_method and trans.origin_type == node:
                 sym = self.language.render_tail(ctx, trans.name, arg_symbols)
-                tails.append(sym)
+                if trans.return_type == node:
+                    fluents.append(sym)
+                else:
+                    # It's an Exit Transition (e.g. .count() -> int)
+                    # We store the transition symbol AND the target type
+                    exits.append((sym, trans.return_type))
             else:
-                # Resolve the origin type if this is a method call
+                # It's a Head (Constructor/Function)
                 origin_sym = None
                 if trans.is_method and trans.origin_type:
                     origin_sym = self._resolve_type(trans.origin_type.py_type)
@@ -112,24 +89,93 @@ class DomainGenerator:
                 )
                 heads.append(sym)
 
-        # 6. Assembly
-        if not heads:
-            # If no ways to create it, it's a dead end?
-            # Or maybe it's abstract. For now, empty choice.
-            head_rule = Choice()
+        # 2. Build Strict Rule (T ::= Head + FluentChain)
+        # This preserves the existing "Type Safe" logic for arguments
+        head_rule = Choice(*heads) if heads else Choice()
+        fluent_choice = Choice(*fluents) if fluents else Choice()
+
+        # Define Strict Chain Rule: (Fluent)*
+        strict_chain_name = f"{ref.name}_Chain"
+        self.grammar.rules[strict_chain_name] = fluent_choice
+        strict_chain_ref = self.grammar.any(strict_chain_name)
+
+        # T ::= Head + StrictChain
+        self.grammar.rules[ref.name] = head_rule + strict_chain_ref
+
+        # 3. Build Open Pipeline Rule (Pipeline_T)
+        # Pipeline_T ::= StrictChain + ( Exit_U Pipeline_U | Exit_V Pipeline_V | epsilon )
+        # This allows the Root to transition out.
+
+        pipeline_name = f"{ref.name}_Pipeline"
+
+        # The 'Next Step' is a choice of all possible exits
+        exit_options = []
+        for sym, target_node in exits:
+            # Recursively refer to the TARGET's pipeline
+            # This links Pipeline_DF -> .count() -> Pipeline_int
+            target_pipeline_name = f"{target_node.name}_Pipeline"
+
+            # We must ensure the target pipeline exists (Forward Ref logic)
+            # We can just use NonTerminal string reference, GBNF resolves it later
+            exit_options.append(sym + NonTerminal(target_pipeline_name))
+
+            # Trigger resolution of the target to ensure its rules are built
+            self._resolve_type(target_node.py_type)
+
+        if exit_options:
+            # Pipeline ::= (Fluent)* ( Choice(Exits) | epsilon )
+            # We use 'maybe' to represent (Exits | epsilon)
+            pipeline_rule = strict_chain_ref + Choice(*exit_options, Epsilon())
         else:
-            head_rule = Choice(*heads)
+            # Dead end: Pipeline ::= (Fluent)*
+            pipeline_rule = strict_chain_ref
 
-        if not tails:
-            # Simple case: T ::= Head
-            self.grammar.rules[ref.name] = head_rule
-        else:
-            # Fluent case: T ::= Head (Tail)*
-            tail_choice = Choice(*tails)
+        self.grammar.rules[pipeline_name] = pipeline_rule
 
-            # We explicitly name the tail rule for cleaner GBNF
-            tail_name = f"{ref.name}_Chain"
-            self.grammar.rules[tail_name] = tail_choice
+    def build(self, *entrypoints: Type) -> Grammar:
+        nodes = self.reflector.reflect(*entrypoints)
+        if not nodes:
+            raise ValueError("No types found.")
 
-            # Structure: Head + Any(Tail)
-            self.grammar.rules[ref.name] = head_rule + self.grammar.any(tail_name)
+        # 1. Build all rules (Strict + Pipelines)
+        for node in nodes:
+            self._resolve_type(node.py_type)
+
+        # 2. Construct Root from Entrypoints
+        # Root ::= Head_T1 Pipeline_T1 | Head_T2 Pipeline_T2 ...
+        root_options = []
+        for entry in entrypoints:
+            node = self.reflector._get_or_create_node(entry)
+
+            # Re-construct the 'Head' part for the root choice
+            # (We can't reuse T because T includes StrictChain,
+            #  we want Head + Pipeline)
+
+            # Get Heads specifically for this entrypoint
+            # Note: This is slightly redundant calculation but safer for composition
+            heads = []
+            ctx = RenderContext(self.grammar, self._resolve_type)
+            for trans in node.producers:
+                if not (trans.is_method and trans.origin_type == node):
+                    # It's a Head
+                    origin_sym = None
+                    if trans.is_method and trans.origin_type:
+                        origin_sym = self._resolve_type(trans.origin_type.py_type)
+
+                    arg_syms = {
+                        k: self._resolve_type(v.py_type)
+                        for k, v in trans.params.items()
+                    }
+                    heads.append(
+                        self.language.render_head(
+                            ctx, trans.name, arg_syms, origin=origin_sym
+                        )
+                    )
+
+            head_choice = Choice(*heads)
+            pipeline_ref = NonTerminal(f"{node.name}_Pipeline")
+
+            root_options.append(head_choice + pipeline_ref)
+
+        self.grammar.root = Choice(*root_options)
+        return self.grammar

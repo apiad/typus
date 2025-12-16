@@ -40,8 +40,8 @@ def test_generator_structure():
     print(output)
 
     # 1. Check Heads (DF rule)
-    # Should contain __init__ and load
-    assert "[HEAD:__init__(path)]" in output
+    # Should contain DF and load
+    assert "[HEAD:DF(path)]" in output
     assert "[HEAD:load()]" in output
 
     # 2. Check Tails (DF_Chain rule)

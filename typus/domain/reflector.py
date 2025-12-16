@@ -96,6 +96,7 @@ class Reflector:
             return_type = owner_node
             is_method_call = False  # Treat as static factory
             origin_type = None  # No origin (created from void/args)
+            name = owner_node.name
         else:
             # Regular function or method
             if "return" not in hints:
