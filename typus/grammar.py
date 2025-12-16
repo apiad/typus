@@ -1,3 +1,4 @@
+from string import Formatter
 from typing import Dict, Union, Optional, Callable
 import re
 from typus.core import Symbol, Terminal, NonTerminal, Sequence, Choice, Epsilon
@@ -136,3 +137,35 @@ class Grammar:
         """ZeroOrMore: (symbol (sep symbol)*)?"""
         # We pass the explicit name to some(), which will enforce the uniqueness check
         return self.maybe(self.some(symbol, sep, name=name))
+
+    def template(self, fmt: str, **kwargs) -> Sequence:
+        """
+        Helper method to quickly add a sequence of symbols
+        by interpolating rules in a template (f-string like) text.
+
+        Usage example:
+
+        >>> g.article = g.template("# {title} \n\n {content}")
+
+        This creates a rule `g.article` which is a sequence of terminals
+        like "# " and " \n\n " interpolating the rules `g.title` and `g.content`.
+
+        Interpolated rules are resolved by name in the current grammar,
+        but can be overriden using **kwargs.
+        """
+        symbols = []
+
+        # Iterate over the parsed structure
+        for literal, field_name, spec, conversion in Formatter().parse(fmt):
+
+            # 1. Add the static text constraint
+            if literal:
+                symbols.append(Terminal(literal))
+
+            # 2. Add the dynamic grammar rule
+            if field_name:
+                # Look up the rule in the passed kwargs or the grammar itself
+                rule = kwargs.get(field_name) or getattr(self, field_name)
+                symbols.append(rule)
+
+        return Sequence(*symbols)
