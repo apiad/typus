@@ -97,12 +97,13 @@ class DomainGenerator:
 
         # Define Strict Chain Rule: (Fluent)*
         strict_chain_name = f"{ref.name}_Chain"
-        self.grammar.rules[strict_chain_name] = fluent_choice
 
-        # FIX: Do not wrap Epsilon in any() -> Avoids infinite recursion of empty strings
+        # --- FIX: Only create Chain rule if fluents exist ---
         if fluents:
+            self.grammar.rules[strict_chain_name] = fluent_choice
             strict_chain_ref = self.grammar.any(strict_chain_name)
         else:
+            # If no fluents, chain is Epsilon. Do NOT add to grammar rules.
             strict_chain_ref = Epsilon()
 
         # T ::= Head + StrictChain
@@ -129,9 +130,7 @@ class DomainGenerator:
             self._resolve_type(target_node.py_type)
 
         if exit_options:
-            # FIX: Use maybe() logic instead of Choice(..., Epsilon()) directly
-            # to be friendlier to EBNF generators
-            pipeline_rule = strict_chain_ref + self.grammar.maybe(Choice(*exit_options))
+            pipeline_rule = strict_chain_ref + Choice(*exit_options, Epsilon())
         else:
             pipeline_rule = strict_chain_ref
 
@@ -201,6 +200,8 @@ class DomainGenerator:
             root_options = [NonTerminal(f"{n.name}_Pipeline") for n in nodes]
 
         self.grammar.root = Choice(*root_options)
+        self.grammar.cleanup()
+
         return self.grammar
 
     def _render_entrypoint_heads(

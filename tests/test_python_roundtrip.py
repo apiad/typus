@@ -39,6 +39,9 @@ def test_parsing_valid_python_code():
 
     # 3. Compile to Lark
     lark_source = grammar.compile("lark")
+
+    print(lark_source)
+
     parser = Lark(lark_source)
 
     # Case A: Simple Function Call (Head)

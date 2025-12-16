@@ -165,3 +165,107 @@ class Grammar:
                 symbols.append(rule)
 
         return Sequence(*symbols)
+
+    def cleanup(self):
+        """
+        Removes rules that are effectively Epsilon and updates references.
+        """
+        # 1. Identify Epsilon Rules (Fixed Point Iteration)
+        epsilon_rules = set()
+
+        while True:
+            changed = False
+            for name, rule in self.rules.items():
+                if name in epsilon_rules:
+                    continue
+
+                if self._is_symbol_epsilon(rule, epsilon_rules):
+                    epsilon_rules.add(name)
+                    changed = True
+
+            if not changed:
+                break
+
+        # 2. Prune Epsilon Rules & Update References
+        new_rules = {}
+        for name, rule in self.rules.items():
+            if name in epsilon_rules:
+                continue  # Delete the rule
+
+            # Update the rule body (replace Refs to empty rules with Epsilon)
+            new_body = self._prune_symbol(rule, epsilon_rules)
+
+            # If the rule became empty during pruning (e.g. it was Sequence(EmptyRef)), drop it too
+            if isinstance(new_body, Epsilon):
+                continue
+
+            new_rules[name] = new_body
+
+        self.rules = new_rules
+
+        # 3. Update Root
+        if self.root:
+            self.root = self._prune_symbol(self.root, epsilon_rules)
+
+    def _is_symbol_epsilon(self, sym: Symbol, eps_set: set[str]) -> bool:
+        if isinstance(sym, Epsilon):
+            return True
+        if isinstance(sym, NonTerminal):
+            return sym.name in eps_set
+
+        if isinstance(sym, Sequence):
+            # Sequence is empty if ALL items are empty
+            return not sym.items or all(
+                self._is_symbol_epsilon(i, eps_set) for i in sym.items
+            )
+
+        if isinstance(sym, Choice):
+            # Choice is empty if ALL options are empty
+            return not sym.options or all(
+                self._is_symbol_epsilon(o, eps_set) for o in sym.options
+            )
+
+        return False
+
+    def _prune_symbol(self, sym: Symbol, eps_set: set[str]) -> Symbol:
+        if isinstance(sym, NonTerminal):
+            if sym.name in eps_set:
+                return Epsilon()
+            return sym
+
+        if isinstance(sym, Sequence):
+            new_items = []
+            for item in sym.items:
+                pruned = self._prune_symbol(item, eps_set)
+                if not isinstance(pruned, Epsilon):
+                    new_items.append(pruned)
+
+            if not new_items:
+                return Epsilon()
+            if len(new_items) == 1:
+                return new_items[0]
+            return Sequence(*new_items)
+
+        if isinstance(sym, Choice):
+            new_opts = []
+            has_epsilon = False
+            for opt in sym.options:
+                pruned = self._prune_symbol(opt, eps_set)
+                if isinstance(pruned, Epsilon):
+                    has_epsilon = True
+                else:
+                    new_opts.append(pruned)
+
+            if not new_opts:
+                return Epsilon()
+
+            if has_epsilon:
+                # Deduplicate explicit Epsilon
+                if not any(isinstance(o, Epsilon) for o in new_opts):
+                    new_opts.append(Epsilon())
+
+            if len(new_opts) == 1:
+                return new_opts[0]
+            return Choice(*new_opts)
+
+        return sym
