@@ -98,7 +98,12 @@ class DomainGenerator:
         # Define Strict Chain Rule: (Fluent)*
         strict_chain_name = f"{ref.name}_Chain"
         self.grammar.rules[strict_chain_name] = fluent_choice
-        strict_chain_ref = self.grammar.any(strict_chain_name)
+
+        # FIX: Do not wrap Epsilon in any() -> Avoids infinite recursion of empty strings
+        if fluents:
+            strict_chain_ref = self.grammar.any(strict_chain_name)
+        else:
+            strict_chain_ref = Epsilon()
 
         # T ::= Head + StrictChain
         self.grammar.rules[ref.name] = head_rule + strict_chain_ref
