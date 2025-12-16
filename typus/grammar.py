@@ -16,7 +16,6 @@ class Grammar:
 
     def __init__(self):
         self.rules: Dict[str, Symbol] = {}
-        self.root: Optional[Symbol] = None
 
     @classmethod
     def register(cls, name: str, factory: VisitorFactory):
@@ -34,7 +33,7 @@ class Grammar:
             value = Terminal(value)
 
         if not self.rules:
-            self.root = value
+            self.rules["root"] = getattr(self, name)
 
         self.rules[name] = value
 

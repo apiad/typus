@@ -45,6 +45,12 @@ class Terminal(Symbol):
         kind = "Regex" if self.is_regex else "Str"
         return f"{kind}({self.value!r})"
 
+    def __eq__(self, value: object) -> bool:
+        return repr(self) == repr(value)
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
+
 
 class Epsilon(Symbol):
     """
@@ -57,6 +63,12 @@ class Epsilon(Symbol):
 
     def __repr__(self):
         return "Epsilon()"
+
+    def __eq__(self, value: object) -> bool:
+        return repr(self) == repr(value)
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
 
 
 class Sequence(Symbol):
@@ -110,3 +122,9 @@ class NonTerminal(Symbol):
 
     def __repr__(self):
         return f"Ref({self.name})"
+
+    def __eq__(self, value: object) -> bool:
+        return repr(self) == repr(value)
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
