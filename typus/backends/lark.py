@@ -34,8 +34,8 @@ class LarkCompiler(Compiler[str]):
 
     def visit_terminal(self, node: Terminal) -> str:
         # If it's a literal empty string, treat it effectively as Epsilon for Lark
-        if not node.value and not node.is_regex:
-            return ""
+        if not node.value:
+            raise ValueError("Empty terminals not allowed")
 
         if node.is_regex:
             clean_val = node.value.replace("/", r"\/")
@@ -112,7 +112,7 @@ class LarkCompiler(Compiler[str]):
         return core
 
     def visit_epsilon(self, node: Epsilon) -> str:
-        return ""
+        assert False, "we should have compiled this away"
 
     def visit_non_terminal(self, node: NonTerminal) -> str:
         return node.name.lower()

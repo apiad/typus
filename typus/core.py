@@ -35,6 +35,9 @@ class Terminal(Symbol):
     """Represents a literal string or a regex pattern."""
 
     def __init__(self, value: str, is_regex: bool = False):
+        if not value:
+            raise ValueError("Terminal cannot be empty")
+
         self.value = value
         self.is_regex = is_regex
 
