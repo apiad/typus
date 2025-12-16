@@ -9,10 +9,10 @@ def test_maybe_structure():
     # root ::= "A" | ""
     g.root = g.maybe("A")
 
-    assert isinstance(g.root, Choice)
-    assert len(g.root.options) == 2
-    assert isinstance(g.root.options[0], Terminal)
-    assert isinstance(g.root.options[1], Epsilon)
+    assert isinstance(g.rules["root"], Choice)
+    assert len(g.rules["root"].options) == 2
+    assert isinstance(g.rules["root"].options[0], Terminal)
+    assert isinstance(g.rules["root"].options[1], Epsilon)
 
 
 def test_some_recursion():
@@ -41,11 +41,11 @@ def test_any_structure():
     g.root = g.any("A", sep=",")
 
     # Outer layer is maybe (Choice)
-    assert isinstance(g.root, Choice)
-    assert isinstance(g.root.options[1], Epsilon)
+    assert isinstance(g.rules["root"], Choice)
+    assert isinstance(g.rules["root"].options[1], Epsilon)
 
     # Inner layer is some (NonTerminal ref)
-    ref = g.root.options[0]
+    ref = g.rules["root"].options[0]
     assert isinstance(ref, NonTerminal)
 
 

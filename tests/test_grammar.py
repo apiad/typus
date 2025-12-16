@@ -14,9 +14,6 @@ def test_grammar_definition():
     assert "name" in g.rules
     assert isinstance(g.rules["name"], Choice)
 
-    # Check auto-root assignment
-    assert g.rules["root"] == g.name
-
 
 def test_lazy_references():
     g = Grammar()

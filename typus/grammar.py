@@ -35,14 +35,14 @@ class Grammar:
         self.rules[name] = value
 
     def compile(self, backend: Union[str, Compiler] = "gbnf", **kwargs) -> str:
+        if "root" not in self.rules:
+            raise RuntimeError("No root symbol defined")
+
         if isinstance(backend, str):
             if backend not in self._backends:
                 known = ", ".join(self._backends.keys())
                 raise ValueError(f"Unknown backend: '{backend}'. Available: {known}")
             backend = self._backends[backend](**kwargs)
-
-        if "root" not in self.rules:
-            raise RuntimeError("No root symbol defined")
 
         return backend.compile(self)
 

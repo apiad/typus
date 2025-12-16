@@ -44,11 +44,10 @@ class GBNFCompiler(Compiler[str]):
 
         # 1. Generate the root rule
         # We implicitly define 'root' to point to the user's root symbol
-        if grammar.root:
-            lines.append(f"root ::= {grammar.root.accept(self)}")
-        elif "root" not in grammar.rules:
-            # Fallback if user didn't define root
+        if "root" not in grammar.rules:
             raise ValueError("Grammar has no root defined.")
+
+        lines.append(f"root ::= {grammar.rules['root'].accept(self)}")
 
         # 2. Generate all named rules
         for name, symbol in grammar.rules.items():

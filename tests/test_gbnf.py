@@ -30,6 +30,7 @@ def test_recursion_gbnf():
     g = Grammar()
     item = Terminal("1")
     g.list = Choice(item, Sequence(item, Terminal(","), g.list))
+    g.root = g.list
 
     output = g.compile("gbnf")
     assert 'list ::= ( "1" | "1" "," list )' in output
