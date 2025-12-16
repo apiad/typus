@@ -51,6 +51,7 @@ class LarkCompiler(Compiler[str]):
         clean_parts = [p for p in parts if p]
 
         if not clean_parts:
+            raise Exception
             return ""  # Sequence of nothings is nothing
 
         # Join with space
@@ -92,6 +93,7 @@ class LarkCompiler(Compiler[str]):
 
         # 2. Construct the core choice string "A | B"
         if not compiled_opts:
+            raise Exception
             return ""  # All options were epsilon -> Empty
 
         core = " | ".join(compiled_opts)

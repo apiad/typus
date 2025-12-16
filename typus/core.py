@@ -30,6 +30,12 @@ class Symbol(ABC):
     def __ror__(self, other: Union["Symbol", str]) -> "Choice":
         return Choice(other, self)
 
+    def __eq__(self, value: object) -> bool:
+        return repr(self) == repr(value)
+
+    def __hash__(self) -> int:
+        return hash(repr(self))
+
 
 class Terminal(Symbol):
     """Represents a literal string or a regex pattern."""
@@ -67,12 +73,6 @@ class Epsilon(Symbol):
     def __repr__(self):
         return "Epsilon()"
 
-    def __eq__(self, value: object) -> bool:
-        return repr(self) == repr(value)
-
-    def __hash__(self) -> int:
-        return hash(repr(self))
-
 
 class Sequence(Symbol):
     """A sequence of symbols (A + B)."""
@@ -94,6 +94,9 @@ class Sequence(Symbol):
     def accept(self, visitor: "Compiler"):
         return visitor.visit_sequence(self)
 
+    def __repr__(self) -> str:
+        return f"Sequence(*{repr(self.items)})"
+
 
 class Choice(Symbol):
     """A choice between symbols (A | B)."""
@@ -113,6 +116,9 @@ class Choice(Symbol):
     def accept(self, visitor: "Compiler"):
         return visitor.visit_choice(self)
 
+    def __repr__(self) -> str:
+        return f"Choice(*{repr(self.options)})"
+
 
 class NonTerminal(Symbol):
     """A reference to another rule (e.g., 'expr' or 'statement')."""
@@ -125,9 +131,3 @@ class NonTerminal(Symbol):
 
     def __repr__(self):
         return f"Ref({self.name})"
-
-    def __eq__(self, value: object) -> bool:
-        return repr(self) == repr(value)
-
-    def __hash__(self) -> int:
-        return hash(repr(self))
