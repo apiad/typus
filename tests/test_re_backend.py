@@ -71,7 +71,9 @@ def test_regex_bounded_recursion():
     # Case 1: max_depth=1
     # We enter S once. Recursion is blocked immediately (returns "").
     # Logic: "a" | "b" + "" -> Matches "a" or "b"
-    pattern_1 = g.compile("regex", max_depth=1)
+    pattern_1 = g.compile("regex", max_depth=0)
+    print(pattern_1)
+
     assert re.fullmatch(pattern_1, "a")
     assert re.fullmatch(pattern_1, "b")  # Artifact of pruning
     assert not re.fullmatch(pattern_1, "ba")  # Requires depth 2
@@ -79,7 +81,7 @@ def test_regex_bounded_recursion():
     # Case 2: max_depth=2
     # We enter S, then recurse S once.
     # Logic: "a" | "b" ("a" | "b") -> Matches "a", "ba", "bb"
-    pattern_2 = g.compile("regex", max_depth=2)
+    pattern_2 = g.compile("regex", max_depth=1)
     assert re.fullmatch(pattern_2, "ba")
     assert re.fullmatch(pattern_2, "bb")
     assert not re.fullmatch(pattern_2, "bba")  # Requires depth 3

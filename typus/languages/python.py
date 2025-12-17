@@ -15,7 +15,7 @@ class Python(Language):
 
         # 2. Strings: Quoted string regex (simplified)
         if py_type is str:
-            return Terminal('"') + ctx.grammar.regex(r'[^"]*') + Terminal('"')
+            return ctx.grammar.regex(r'\"[^"]*\"')
 
         # 3. Booleans
         if py_type is bool:
